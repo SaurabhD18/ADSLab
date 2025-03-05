@@ -1,20 +1,10 @@
-// Q) Use Treap to implement a priority-based task scheduler where each task has a unique ID
-// (key) and a priority. Higher-priority tasks should be completed first while maintaining the
-// properƟes of a Binary Search Tree (BST).
-// Tasks:
-// 1. Insert tasks into Treap – Each task has a unique task ID (key) and an assigned priority.
-// 2. Delete completed tasks – Remove a task once it's completed.
-// 3. Find the highest-priority task – Retrieve the task with the highest priority efficiently. \
-
 #include <iostream>
+using namespace std;
 
 struct treapNode {
     int key, priority;
     treapNode *left, *right;
 };
-
-using namespace std;
-
 
 treapNode* newNode(int key, int priority) {
     treapNode* temp = new treapNode;
@@ -27,20 +17,16 @@ treapNode* newNode(int key, int priority) {
 treapNode* rightRotate(treapNode* y) {
     treapNode* x = y->left;
     treapNode* T2 = x->right;
-
     x->right = y;
     y->left = T2;
-
     return x;
 }
 
 treapNode* leftRotate(treapNode* x) {
     treapNode* y = x->right;
     treapNode* T2 = y->left;
-
     y->left = x;
     x->right = T2;
-
     return y;
 }
 
@@ -49,28 +35,15 @@ treapNode* insert(treapNode* root, int key, int priority) {
 
     if (key <= root->key) {
         root->left = insert(root->left, key, priority);
-
         if (root->left->priority > root->priority)
             root = rightRotate(root);
     } else {
         root->right = insert(root->right, key, priority);
-
         if (root->right->priority > root->priority)
             root = leftRotate(root);
     }
-
     return root;
 }
-
-
-treapNode* search(treapNode* root, int key) {
-    if (!root || root->key == key) return root;
-
-    if (root->key < key) return search(root->right, key);
-
-    return search(root->left, key);
-}
-
 
 treapNode* deleteNode(treapNode* root, int key) {
     if (!root) return root;
@@ -80,11 +53,11 @@ treapNode* deleteNode(treapNode* root, int key) {
     else if (root->left == nullptr) {
         treapNode* temp = root->right;
         delete root;
-        root = temp;
+        return temp;
     } else if (root->right == nullptr) {
         treapNode* temp = root->left;
         delete root;
-        root = temp;
+        return temp;
     } else if (root->left->priority < root->right->priority) {
         root = leftRotate(root);
         root->left = deleteNode(root->left, key);
@@ -92,15 +65,12 @@ treapNode* deleteNode(treapNode* root, int key) {
         root = rightRotate(root);
         root->right = deleteNode(root->right, key);
     }
-
     return root;
 }
 
 treapNode* findMaxPriority(treapNode* root) {
     if (!root) return nullptr;
-
     if (root->right) return findMaxPriority(root->right);
-
     return root;
 }
 
@@ -114,24 +84,44 @@ void inorder(treapNode* root) {
 
 int main() {
     treapNode* root = nullptr;
-    root = insert(root, 4, 10);
-    root = insert(root, 2, 5);
-    root = insert(root, 6, 15);
-    root = insert(root, 1, 20);
-    root = insert(root, 3, 7);
-    root = insert(root, 5, 3);
-    root = insert(root, 7, 8);
+    int choice, key, priority;
+    do {
+        cout << "\nTask Scheduler Menu:\n";
+        cout << "1. Insert Task\n2. Delete Task\n3. Find Highest Priority Task\n4. Display Tasks (Inorder)\n5. Exit\n";
+        cout << "Enter your choice: ";
+        cin >> choice;
 
-    cout << "Inorder traversal of the given tree \n";
-    inorder(root);
-
-    cout << "\nDelete task 4\n";
-    root = deleteNode(root, 4);
-    cout << "Inorder traversal of the modified tree \n";
-    inorder(root);
-
-    treapNode* maxPriority = findMaxPriority(root);
-    cout << "\nTask with highest priority: Task ID: " << maxPriority->key << " Priority: " << maxPriority->priority << endl;
-
+        switch (choice) {
+            case 1:
+                cout << "Enter Task ID: ";
+                cin >> key;
+                cout << "Enter Priority: ";
+                cin >> priority;
+                root = insert(root, key, priority);
+                break;
+            case 2:
+                cout << "Enter Task ID to delete: ";
+                cin >> key;
+                root = deleteNode(root, key);
+                break;
+            case 3: {
+                treapNode* maxPriority = findMaxPriority(root);
+                if (maxPriority)
+                    cout << "Highest Priority Task: Task ID: " << maxPriority->key << " Priority: " << maxPriority->priority << endl;
+                else
+                    cout << "No tasks available.\n";
+                break;
+            }
+            case 4:
+                cout << "\nTask List (Inorder Traversal):\n";
+                inorder(root);
+                break;
+            case 5:
+                cout << "Exiting...\n";
+                break;
+            default:
+                cout << "Invalid choice! Try again.\n";
+        }
+    } while (choice != 5);
     return 0;
 }
