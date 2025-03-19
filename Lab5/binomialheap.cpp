@@ -1,14 +1,13 @@
 #include <iostream>
 #include <climits>
+
 using namespace std;
 
-// Structure of a Binomial Heap Node
+// Structure for a Binomial Heap Node
 struct BinomialNode {
     int key;
     int degree;
-    BinomialNode* parent;
-    BinomialNode* child;
-    BinomialNode* sibling;
+    BinomialNode *parent, *child, *sibling;
 
     BinomialNode(int val) {
         key = val;
@@ -17,220 +16,245 @@ struct BinomialNode {
     }
 };
 
-// Class for Binomial Heap
-class BinomialHeap {
-private:
-    BinomialNode* head;
+// Function to merge two Binomial Trees
+BinomialNode* mergeBinomialTrees(BinomialNode* b1, BinomialNode* b2) {
+    if (b1->key > b2->key) 
+        swap(b1, b2);
+    b2->parent = b1;
+    b2->sibling = b1->child;
+    b1->child = b2;
+    b1->degree++;
+    return b1;
+}
 
-    // Merging two Binomial Trees of the same degree
-    BinomialNode* mergeTrees(BinomialNode* b1, BinomialNode* b2) {
-        if (b1->key > b2->key)
-            swap(b1, b2);
-        b2->parent = b1;
-        b2->sibling = b1->child;
-        b1->child = b2;
-        b1->degree++;
-        return b1;
-    }
+// Function to merge two Binomial Heaps
+BinomialNode* mergeHeaps(BinomialNode* h1, BinomialNode* h2) {
+    if (!h1) return h2;
+    if (!h2) return h1;
 
-    // Merging two Binomial Heaps
-    BinomialNode* mergeHeaps(BinomialNode* h1, BinomialNode* h2) {
-        if (!h1) return h2;
-        if (!h2) return h1;
-        
-        BinomialNode* newHead = nullptr;
-        BinomialNode** pos = &newHead;
+    BinomialNode* head = nullptr;
+    BinomialNode* tail = nullptr;
+    BinomialNode* p1 = h1;
+    BinomialNode* p2 = h2;
 
-        while (h1 && h2) {
-            if (h1->degree <= h2->degree) {
-                *pos = h1;
-                h1 = h1->sibling;
-            } else {
-                *pos = h2;
-                h2 = h2->sibling;
-            }
-            pos = &((*pos)->sibling);
+    while (p1 && p2) {
+        BinomialNode* minNode = nullptr;
+        if (p1->degree <= p2->degree) {
+            minNode = p1;
+            p1 = p1->sibling;
+        } else {
+            minNode = p2;
+            p2 = p2->sibling;
         }
-        *pos = (h1) ? h1 : h2;
-        return newHead;
+
+        if (!head) {
+            head = minNode;
+            tail = minNode;
+        } else {
+            tail->sibling = minNode;
+            tail = minNode;
+        }
     }
 
-    // Consolidate trees of the same degree ;- Union of two Binomial Heaps :- The ones created by mergeTrees of Old binomial heap and new binomial heap
-    void consolidate() {
-        if (!head) return;
-        BinomialNode* prev = nullptr;
-        BinomialNode* curr = head;
-        BinomialNode* next = curr->sibling;
+    tail->sibling = (p1) ? p1 : p2;
+    return head;
+}
 
-        while (next) {
-            if ((curr->degree != next->degree) || (next->sibling && next->sibling->degree == curr->degree)) {
-                prev = curr;
+// Function to unite two Binomial Heaps
+BinomialNode* uniteHeaps(BinomialNode* h1, BinomialNode* h2) {
+    BinomialNode* mergedHeap = mergeHeaps(h1, h2);
+    if (!mergedHeap) return nullptr;
+
+    BinomialNode* prev = nullptr;
+    BinomialNode* curr = mergedHeap;
+    BinomialNode* next = curr->sibling;
+
+    while (next) {
+        if ((curr->degree != next->degree) || 
+           (next->sibling && next->sibling->degree == curr->degree)) {
+            prev = curr;
+            curr = next;
+        } else {
+            if (curr->key <= next->key) {
+                curr->sibling = next->sibling;
+                mergeBinomialTrees(curr, next);
+            } else {
+                if (!prev) 
+                    mergedHeap = next;
+                else
+                    prev->sibling = next;
+                mergeBinomialTrees(next, curr);
                 curr = next;
-            } else {
-                if (curr->key <= next->key) {
-                    curr->sibling = next->sibling;
-                    mergeTrees(curr, next);
-                } else {
-                    if (!prev) head = next;
-                    else prev->sibling = next;
-                    mergeTrees(next, curr);
-                    curr = next;
-                }
             }
-            next = curr->sibling;
         }
+        next = curr->sibling;
+    }
+    return mergedHeap;
+}
+
+// Insert a node in Binomial Heap
+BinomialNode* insert(BinomialNode* heap, int key) {
+    BinomialNode* newNode = new BinomialNode(key);
+    return uniteHeaps(heap, newNode);
+}
+
+// Find the minimum key in Binomial Heap
+BinomialNode* findMin(BinomialNode* heap) {
+    if (!heap) return nullptr;
+
+    BinomialNode* minNode = heap;
+    BinomialNode* temp = heap;
+
+    while (temp) {
+        if (temp->key < minNode->key)
+            minNode = temp;
+        temp = temp->sibling;
+    }
+    return minNode;
+}
+
+// Extract minimum key from Binomial Heap
+BinomialNode* extractMin(BinomialNode*& heap) {
+    if (!heap) return nullptr;
+
+    BinomialNode* minNode = findMin(heap);
+    if (!minNode) return nullptr;
+
+    BinomialNode* prev = nullptr;
+    BinomialNode* temp = heap;
+    while (temp != minNode) {
+        prev = temp;
+        temp = temp->sibling;
     }
 
-public:
-    BinomialHeap() { head = nullptr; }
+    if (prev) 
+        prev->sibling = temp->sibling;
+    else 
+        heap = temp->sibling;
 
-    // Insert a key into the Binomial Heap
-    void insert(int key) {
-        BinomialHeap tempHeap;
-        tempHeap.head = new BinomialNode(key);
-        head = mergeHeaps(head, tempHeap.head);
-        consolidate();
+    BinomialNode* childHeap = nullptr;
+    BinomialNode* child = minNode->child;
+    while (child) {
+        BinomialNode* next = child->sibling;
+        child->sibling = childHeap;
+        child->parent = nullptr;
+        childHeap = child;
+        child = next;
     }
 
-    // Find the minimum key
-    int findMin() {
-        if (!head) return INT_MAX;
-        BinomialNode* minNode = head;
-        BinomialNode* temp = head;
-        int minKey = head->key;
+    heap = uniteHeaps(heap, childHeap);
+    return minNode;
+}
 
-        while (temp) {
-            if (temp->key < minKey) {
-                minKey = temp->key;
-                minNode = temp;
-            }
-            temp = temp->sibling;
-        }
-        return minKey;
+// Decrease key operation
+void decreaseKey(BinomialNode* node, int newKey) {
+    if (!node || newKey > node->key) {
+        cout << "Invalid operation\n";
+        return;
+    }
+    node->key = newKey;
+    BinomialNode* curr = node;
+    BinomialNode* parent = node->parent;
+
+    while (parent && curr->key < parent->key) {
+        swap(curr->key, parent->key);
+        curr = parent;
+        parent = curr->parent;
+    }
+}
+
+// Delete key
+BinomialNode* deleteKey(BinomialNode* heap, int key) {
+    BinomialNode* minNode = findMin(heap);
+    if (!minNode) return heap;
+
+    decreaseKey(minNode, INT_MIN);
+    extractMin(heap);
+    return heap;
+}
+
+void printTree(BinomialNode* node) {
+    if (!node) return;
+    cout << node->key << " ";
+    printTree(node->child);  // Recursively print child nodes
+    printTree(node->sibling); // Move to sibling node
+}
+
+void displayHeap(BinomialNode* heap) {
+    if (!heap) {
+        cout << "Heap is empty\n";
+        return;
     }
 
-    // Unite with another Binomial Heap
-    void unite(BinomialHeap& other) {
-        head = mergeHeaps(head, other.head);
-        consolidate();
+    cout << "Binomial Heap:\n";
+    BinomialNode* temp = heap;
+    
+    while (temp) {
+        cout << "B" << temp->degree << " ( ";
+        printTree(temp);
+        cout << ")\n";
+        temp = temp->sibling; // Move to the next binomial tree in the heap
     }
+}
 
-    // Extract minimum key
-    int extractMin() {
-        if (!head) return INT_MAX;
 
-        BinomialNode* minNode = head;
-        BinomialNode* prevMin = nullptr;
-        BinomialNode* temp = head;
-        BinomialNode* prev = nullptr;
-        int minKey = head->key;
-
-        while (temp) {
-            if (temp->key < minKey) {
-                minKey = temp->key;
-                minNode = temp;
-                prevMin = prev;
-            }
-            prev = temp;
-            temp = temp->sibling;
-        }
-
-        if (prevMin) prevMin->sibling = minNode->sibling;
-        else head = minNode->sibling;
-
-        BinomialNode* child = minNode->child;
-        BinomialNode* revChild = nullptr;
-        while (child) {
-            BinomialNode* next = child->sibling;
-            child->sibling = revChild;
-            child->parent = nullptr;
-            revChild = child;
-            child = next;
-        }
-
-        BinomialHeap tempHeap;
-        tempHeap.head = revChild;
-        unite(tempHeap);
-
-        delete minNode;
-        return minKey;
-    }
-
-    // Decrease a key
-    void decreaseKey(BinomialNode* node, int newKey) {
-        if (!node || newKey > node->key) return;
-
-        node->key = newKey;
-        BinomialNode* temp = node;
-        BinomialNode* parent = node->parent;
-
-        while (parent && temp->key < parent->key) {
-            swap(temp->key, parent->key);
-            temp = parent;
-            parent = parent->parent;
-        }
-    }
-
-    // Delete a key
-    void deleteKey(int key) {
-        BinomialNode* temp = head;
-        while (temp) {
-            if (temp->key == key) {
-                decreaseKey(temp, INT_MIN);
-                extractMin();
-                return;
-            }
-            temp = temp->sibling;
-        }
-    }
-
-    // Print heap (utility function)
-    void printHeap(BinomialNode* h) {
-        if (!h) return;
-        cout << h->key << " ";
-        printHeap(h->child);
-        printHeap(h->sibling);
-    }
-
-    void display() {
-        cout << "Heap: ";
-        printHeap(head);
-        cout << endl;
-    }
-};
-
-// Driver function
+// Main function with user-driven menu
 int main() {
-    BinomialHeap heap;
+    BinomialNode* heap = nullptr;
     int choice, key;
-    while (true) {
-        cout << "\n1. Insert\n2. Find Min\n3. Extract Min\n4. Delete Key\n5. Display Heap\n6. Exit\nEnter choice: ";
+
+    do {
+        cout << "\nBinomial Heap Operations:\n";
+        cout << "1. Insert Key\n";
+        cout << "2. Find Minimum Key\n";
+        cout << "3. Extract Minimum Key\n";
+        cout << "4. Decrease Key\n";
+        cout << "5. Delete Key\n";
+        cout << "6. Display Heap\n";
+        cout << "7. Exit\n";
+        cout << "Enter your choice: ";
         cin >> choice;
+
         switch (choice) {
             case 1:
                 cout << "Enter key to insert: ";
                 cin >> key;
-                heap.insert(key);
+                heap = insert(heap, key);
                 break;
             case 2:
-                cout << "Minimum key: " << heap.findMin() << endl;
+                if (BinomialNode* minNode = findMin(heap))
+                    cout << "Minimum Key: " << minNode->key << endl;
+                else
+                    cout << "Heap is empty\n";
                 break;
             case 3:
-                cout << "Extracted Min: " << heap.extractMin() << endl;
+                BinomialNode* minNode;
+                if (minNode = extractMin(heap))
+                    cout << "Extracted Minimum Key: " << minNode->key << endl;
+                else
+                    cout << "Heap is empty\n";
+                delete minNode;
                 break;
             case 4:
-                cout << "Enter key to delete: ";
+                cout << "Enter key to decrease: ";
                 cin >> key;
-                heap.deleteKey(key);
+                decreaseKey(findMin(heap), key);
                 break;
             case 5:
-                heap.display();
+                cout << "Enter key to delete: ";
+                cin >> key;
+                heap = deleteKey(heap, key);
                 break;
             case 6:
-                exit(0);
+                displayHeap(heap);
+                break;
+            case 7:
+                cout << "Exiting program...\n";
+                break;
             default:
                 cout << "Invalid choice! Try again.\n";
         }
-    }
+    } while (choice != 7);
+
     return 0;
 }
